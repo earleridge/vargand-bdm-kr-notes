@@ -177,20 +177,29 @@ def main():
     articles = get_patch_list()
     seen = load_state()
 
-    if not seen:
-        if SEND_LATEST:
-            # Explicit test run: process the newest article on first run.
-            new_articles = [articles[0]]
-            # Mark the rest of the current page as old so the next run doesn't backfill history.
-            seen = {item["url"] for item in articles[1:]}
-        else:
-            # Safe initial setup: mark current articles as seen to avoid flooding the channel.
-            save_state({item["url"] for item in articles})
-            print(f"Initialized state with {len(articles)} existing posts. No messages sent.")
-            return
+    if seen is None:
+        seen = set()
+
+    if SEND_LATEST:
+        # Manual test: explicitly send the newest article,
+        # even if it was already recorded in state.json.
+        new_articles = [articles[0]]
+    elif not seen:
+        # Safe first run: record existing articles without posting.
+        save_state({item["url"] for item in articles})
+        print(
+            f"Initialized state with {len(articles)} "
+            "existing posts. No messages sent."
+        )
+        return
     else:
-        new_articles = [item for item in articles if item["url"] not in seen]
-        new_articles = list(reversed(new_articles))[:MAX_ARTICLES_PER_RUN]
+        new_articles = [
+            item for item in articles
+            if item["url"] not in seen
+        ]
+        new_articles = list(reversed(new_articles))[
+            :MAX_ARTICLES_PER_RUN
+        ]
 
     if not new_articles:
         print("No new Korean patch notes.")
@@ -199,14 +208,21 @@ def main():
     for item in new_articles:
         print(f"Processing: {item['title']} | {item['url']}")
         article_text = get_article_text(item["url"])
+
         if len(article_text) < 300:
-            raise RuntimeError("Article text extraction returned too little text; stopping to avoid sending a bad summary.")
-        summary = summarize_english(item["title"], article_text, item["url"])
+            raise RuntimeError(
+                "Article text extraction returned too little text; "
+                "stopping to avoid sending a bad summary."
+            )
+
+        summary = summarize_english(
+            item["title"], article_text, item["url"]
+        )
         post_to_discord(item["title"], item["url"], summary)
         seen.add(item["url"])
         time.sleep(2)
 
-    # Record all currently visible links to prevent reposting older posts on later runs.
+    # Record all currently visible links to prevent duplicates later.
     seen.update(item["url"] for item in articles)
     save_state(seen)
     print(f"Posted {len(new_articles)} new Korean patch note(s).")
