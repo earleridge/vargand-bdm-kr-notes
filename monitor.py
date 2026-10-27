@@ -117,24 +117,15 @@ def get_patch_list():
         parsed = urlparse(full_url)
         params = parse_qs(parsed.query)
 
-        board_no = params.get("boardNo", [""])[0]
+                board_no = params.get("boardNo", [""])[0]
         content_no = params.get("contentNo", [""])[0]
-        if content_no:
-            debug_title = (
-                normalize_title(a.get("title", ""))
-                or normalize_title(a.get_text(" ", strip=True))
-            )
-            print(
-                f"DEBUG forum link: boardNo={board_no}, "
-                f"title={debug_title!r}, path={parsed.path}"
-            )
-        # Ignore links that do not identify an article in the target board.
+
         if board_no not in {"6", "7"} or not content_no:
-    continue
+            continue
 
         article_key = f"{board_no}:{content_no}"
-if article_key in seen_ids:
-    continue
+        if article_key in seen_ids:
+            continue
 
         # Some links have a short title attribute but fuller visible text.
         title_attribute = normalize_title(a.get("title", ""))
@@ -161,7 +152,7 @@ if article_key in seen_ids:
         if article_type is None:
             continue
 
-        seen_ids.add(article_key)
+                seen_ids.add(article_key)
         found.append({
             "title": title,
             "url": full_url,
