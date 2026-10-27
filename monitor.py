@@ -80,11 +80,13 @@ def normalize_title(raw_title):
     return title
 
 
+
 def classify_article(title):
     """Return 'advance' or 'patch'; ignore shops and routine announcements."""
     normalized = re.sub(r"\s+", " ", title or "").strip()
     compact = normalized.replace(" ", "").lower()
 
+    # Advance notices can have category labels before the notice title.
     advance_markers = (
         "사전안내",
         "사전공지",
@@ -94,7 +96,9 @@ def classify_article(title):
     if any(marker in compact for marker in advance_markers):
         return "advance"
 
-    if normalized.startswith("[패치]") or "패치노트" in normalized:
+    # The title may begin with a category such as '전체공지'
+    # before the actual [패치] label.
+    if "[패치]" in normalized or "패치노트" in normalized:
         return "patch"
 
     return None
@@ -111,19 +115,36 @@ def get_patch_list():
         parsed = urlparse(full_url)
         params = parse_qs(parsed.query)
 
-        if "detail" not in parsed.path.lower():
-            continue
-
         board_no = params.get("boardNo", [""])[0]
         content_no = params.get("contentNo", [""])[0]
-        if board_no != "7" or not content_no or content_no in seen_ids:
+
+        # Ignore links that do not identify an article in the target board.
+        if board_no != "7" or not content_no:
             continue
 
-        title = normalize_title(a.get("title", ""))
-        if not title:
-            title = normalize_title(a.get_text(" ", strip=True))
-        if not title or title in {"패치노트", "목록", "자세히 보기"}:
+        if content_no in seen_ids:
             continue
+
+        # Some links have a short title attribute but fuller visible text.
+        title_attribute = normalize_title(a.get("title", ""))
+        visible_text = normalize_title(a.get_text(" ", strip=True))
+
+        candidates = [
+            candidate
+            for candidate in (title_attribute, visible_text)
+            if candidate and candidate not in {
+                "패치노트",
+                "목록",
+                "자세히 보기",
+            }
+        ]
+
+        if not candidates:
+            continue
+
+        # Prefer the fuller title so category labels and notice wording
+        # are available to the classifier.
+        title = max(candidates, key=len)
 
         article_type = classify_article(title)
         if article_type is None:
@@ -139,17 +160,18 @@ def get_patch_list():
     if not found:
         raise RuntimeError(
             "No matching advance notices or main patch notes were found. "
-            "The official forum layout or title format may have changed."
+            "Check the official forum URL, board number, and article titles."
         )
 
     print(
-        "Found "
-        f"{sum(1 for item in found if item['type'] == 'advance')} advance notice(s) "
-        "and "
-        f"{sum(1 for item in found if item['type'] == 'patch')} main patch note(s)."
+        f"Found {sum(1 for item in found if item['type'] == 'advance')} "
+        "advance notice(s) and "
+        f"{sum(1 for item in found if item['type'] == 'patch')} "
+        "main patch note(s)."
     )
-    return found[:50]
 
+    return found[:50]
+    
 
 def get_article_text(url):
     soup = fetch_soup(url)
