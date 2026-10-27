@@ -4,8 +4,7 @@ import json
 import time
 import html
 from pathlib import Path
-from urllib.parse import urljoin
-
+from urllib.parse import urljoin, urlparse, parse_qs
 import requests
 from bs4 import BeautifulSoup
 
@@ -46,29 +45,54 @@ def clean_text(node):
 def get_patch_list():
     soup = fetch_soup(FORUM_URL)
     found = []
-    seen_urls = set()
+    seen_ids = set()
 
     for a in soup.find_all("a", href=True):
-        href = a["href"]
-        if "Board/Detail" not in href or "contentNo=" not in href:
-            continue
+        href = html.unescape(a.get("href", "")).strip()
         full_url = urljoin(FORUM_URL, href)
-        if "boardNo=7" not in full_url:
+        parsed = urlparse(full_url)
+        params = parse_qs(parsed.query)
+
+        # Accept detail-link paths regardless of capitalization.
+        if "detail" not in parsed.path.lower():
             continue
-        title = re.sub(r"\s+", " ", a.get_text(" ", strip=True)).strip()
-        if not title or full_url in seen_urls:
+
+        board_no = params.get("boardNo", [""])[0]
+        content_no = params.get("contentNo", [""])[0]
+
+        if board_no != "7" or not content_no:
             continue
-        # Filter obvious navigation labels rather than actual patch-note titles.
+
+        if content_no in seen_ids:
+            continue
+
+        title = re.sub(
+            r"\s+", " ", a.get_text(" ", strip=True)
+        ).strip()
+
+        if not title:
+            title = a.get("title", "").strip()
+
+        if not title:
+            continue
+
         if title in {"패치노트", "목록", "자세히 보기"}:
             continue
-        seen_urls.add(full_url)
-        found.append({"title": title, "url": full_url})
+
+        seen_ids.add(content_no)
+        found.append({
+            "title": title,
+            "url": full_url
+        })
 
     if not found:
-        raise RuntimeError("Could not find patch-note links on the official KR forum. The site layout may have changed.")
-    # The official list is normally newest-first; preserve page order.
-    return found[:20]
+        raise RuntimeError(
+            "Could not find patch-note links. "
+            "Check the official forum HTML and link format."
+        )
 
+    print(f"Found {len(found)} Korean forum detail links.")
+    return found[:20]
 def get_article_text(url):
     soup = fetch_soup(url)
     # Prefer article/content containers; fall back to body if the site's markup changes.
