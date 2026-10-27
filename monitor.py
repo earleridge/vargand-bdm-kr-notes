@@ -166,7 +166,9 @@ def get_patch_list():
             "url": full_url,
             "type": article_type,
         })
-
+    test_url = "https://forum.blackdesertm.com/Board/Detail?boardNo=92&contentNo=666996"
+    test_soup = fetch_soup(test_url)
+    print("DEBUG advance article page title:", test_soup.title.get_text(" ", strip=True) if test_soup.title else "No page title")
     if not found:
         raise RuntimeError(
             "No matching advance notices or main patch notes were found. "
