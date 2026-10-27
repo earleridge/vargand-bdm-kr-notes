@@ -81,13 +81,13 @@ def normalize_title(raw_title):
 
 
 
+
 def classify_article(title):
     """Return 'advance' or 'patch'; ignore shops and routine announcements."""
     normalized = re.sub(r"\s+", " ", title or "").strip()
     compact = normalized.replace(" ", "").lower()
 
-    # Advance notices can have category labels before the notice title.
-        advance_markers = (
+    advance_markers = (
         "사전안내",
         "사전공지",
         "업데이트사전안내",
@@ -95,17 +95,16 @@ def classify_article(title):
         "업데이트예고",
         "패치예고",
         "업데이트사전공개",
-        )
+    )
+
     if any(marker in compact for marker in advance_markers):
         return "advance"
 
-    # The title may begin with a category such as '전체공지'
-    # before the actual [패치] label.
     if "[패치]" in normalized or "패치노트" in normalized:
         return "patch"
 
     return None
-
+    
 
 def get_patch_list():
     soup = fetch_soup(FORUM_URL)
