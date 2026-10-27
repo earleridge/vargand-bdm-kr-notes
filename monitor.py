@@ -121,7 +121,7 @@ def get_patch_list():
         board_no = params.get("boardNo", [""])[0]
         content_no = params.get("contentNo", [""])[0]
 
-        if board_no not in {"6", "7"} or not content_no:
+        if board_no not in {"6", "7", "92"} or not content_no:
             continue
 
         article_key = f"{board_no}:{content_no}"
