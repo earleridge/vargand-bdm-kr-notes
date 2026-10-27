@@ -120,7 +120,15 @@ def get_patch_list():
 
         board_no = params.get("boardNo", [""])[0]
         content_no = params.get("contentNo", [""])[0]
-
+        if board_no == "92":
+            debug_title = (
+                normalize_title(a.get("title", ""))
+                or normalize_title(a.get_text(" ", strip=True))
+            )
+            print(
+                f"DEBUG board 92: title={debug_title!r}, "
+                f"url={full_url}"
+            )
         if board_no not in {"6", "7", "92"} or not content_no:
             continue
 
