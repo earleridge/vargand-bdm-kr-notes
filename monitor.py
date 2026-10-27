@@ -129,11 +129,12 @@ def get_patch_list():
                 f"title={debug_title!r}, path={parsed.path}"
             )
         # Ignore links that do not identify an article in the target board.
-        if board_no != "7" or not content_no:
-            continue
+        if board_no not in {"6", "7"} or not content_no:
+    continue
 
-        if content_no in seen_ids:
-            continue
+        article_key = f"{board_no}:{content_no}"
+if article_key in seen_ids:
+    continue
 
         # Some links have a short title attribute but fuller visible text.
         title_attribute = normalize_title(a.get("title", ""))
@@ -160,7 +161,7 @@ def get_patch_list():
         if article_type is None:
             continue
 
-        seen_ids.add(content_no)
+        seen_ids.add(article_key)
         found.append({
             "title": title,
             "url": full_url,
