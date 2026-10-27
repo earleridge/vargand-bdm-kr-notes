@@ -87,12 +87,15 @@ def classify_article(title):
     compact = normalized.replace(" ", "").lower()
 
     # Advance notices can have category labels before the notice title.
-    advance_markers = (
+        advance_markers = (
         "사전안내",
         "사전공지",
         "업데이트사전안내",
         "패치사전안내",
-    )
+        "업데이트예고",
+        "패치예고",
+        "업데이트사전공개",
+        )
     if any(marker in compact for marker in advance_markers):
         return "advance"
 
