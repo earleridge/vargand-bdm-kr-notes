@@ -119,7 +119,15 @@ def get_patch_list():
 
         board_no = params.get("boardNo", [""])[0]
         content_no = params.get("contentNo", [""])[0]
-
+        if content_no:
+            debug_title = (
+                normalize_title(a.get("title", ""))
+                or normalize_title(a.get_text(" ", strip=True))
+            )
+            print(
+                f"DEBUG forum link: boardNo={board_no}, "
+                f"title={debug_title!r}, path={parsed.path}"
+            )
         # Ignore links that do not identify an article in the target board.
         if board_no != "7" or not content_no:
             continue
