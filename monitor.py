@@ -106,6 +106,7 @@ def classify_article(title):
     return None
     
 
+
 def get_patch_list():
     soup = fetch_soup(FORUM_URL)
     found = []
@@ -117,7 +118,7 @@ def get_patch_list():
         parsed = urlparse(full_url)
         params = parse_qs(parsed.query)
 
-                board_no = params.get("boardNo", [""])[0]
+        board_no = params.get("boardNo", [""])[0]
         content_no = params.get("contentNo", [""])[0]
 
         if board_no not in {"6", "7"} or not content_no:
@@ -127,7 +128,6 @@ def get_patch_list():
         if article_key in seen_ids:
             continue
 
-        # Some links have a short title attribute but fuller visible text.
         title_attribute = normalize_title(a.get("title", ""))
         visible_text = normalize_title(a.get_text(" ", strip=True))
 
@@ -144,15 +144,13 @@ def get_patch_list():
         if not candidates:
             continue
 
-        # Prefer the fuller title so category labels and notice wording
-        # are available to the classifier.
         title = max(candidates, key=len)
-
         article_type = classify_article(title)
+
         if article_type is None:
             continue
 
-                seen_ids.add(article_key)
+        seen_ids.add(article_key)
         found.append({
             "title": title,
             "url": full_url,
@@ -162,7 +160,7 @@ def get_patch_list():
     if not found:
         raise RuntimeError(
             "No matching advance notices or main patch notes were found. "
-            "Check the official forum URL, board number, and article titles."
+            "Check the official forum URL, board numbers, and article titles."
         )
 
     print(
@@ -173,6 +171,7 @@ def get_patch_list():
     )
 
     return found[:50]
+    
     
 
 def get_article_text(url):
