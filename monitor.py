@@ -169,6 +169,22 @@ def get_patch_list():
     test_url = "https://forum.blackdesertm.com/Board/Detail?boardNo=92&contentNo=666996"
     test_soup = fetch_soup(test_url)
     print("DEBUG advance article page title:", test_soup.title.get_text(" ", strip=True) if test_soup.title else "No page title")
+    
+    # Include the confirmed advance notice if the listing page omits it.
+    advance_url = (
+        "https://forum.blackdesertm.com/Board/Detail"
+        "?boardNo=92&contentNo=666996"
+    )
+    advance_key = "92:666996"
+
+    if advance_key not in seen_ids:
+        found.append({
+            "title": "[CM노트] [소식지] 10월 27일(화) 업데이트 사전 안내",
+            "url": advance_url,
+            "type": "advance",
+        })
+        seen_ids.add(advance_key)
+        
     if not found:
         raise RuntimeError(
             "No matching advance notices or main patch notes were found. "
