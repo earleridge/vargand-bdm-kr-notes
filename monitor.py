@@ -145,9 +145,11 @@ def get_patch_list():
             continue
 
         title = max(candidates, key=len)
-        article_type = classify_article(title)
+                article_type = classify_article(title)
 
         if article_type is None:
+            if board_no == "6":
+                print(f"DEBUG board 6 title: {title!r}")
             continue
 
         seen_ids.add(article_key)
