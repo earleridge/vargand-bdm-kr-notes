@@ -120,15 +120,7 @@ def get_patch_list():
 
         board_no = params.get("boardNo", [""])[0]
         content_no = params.get("contentNo", [""])[0]
-        if board_no == "92":
-            debug_title = (
-                normalize_title(a.get("title", ""))
-                or normalize_title(a.get_text(" ", strip=True))
-            )
-            print(
-                f"DEBUG board 92: title={debug_title!r}, "
-                f"url={full_url}"
-            )
+        
         if board_no not in {"6", "7", "92"} or not content_no:
             continue
 
@@ -156,8 +148,7 @@ def get_patch_list():
         article_type = classify_article(title)
 
         if article_type is None:
-            if board_no == "6":
-                print(f"DEBUG board 6 title: {title!r}")
+            
             continue
 
         seen_ids.add(article_key)
@@ -166,9 +157,7 @@ def get_patch_list():
             "url": full_url,
             "type": article_type,
         })
-    test_url = "https://forum.blackdesertm.com/Board/Detail?boardNo=92&contentNo=666996"
-    test_soup = fetch_soup(test_url)
-    print("DEBUG advance article page title:", test_soup.title.get_text(" ", strip=True) if test_soup.title else "No page title")
+    
     
     # Include the confirmed advance notice if the listing page omits it.
     advance_url = (
