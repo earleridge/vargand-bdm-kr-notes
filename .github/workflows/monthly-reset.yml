@@ -1,0 +1,28 @@
+
+name: Monthly Reset Notification
+
+on:
+  schedule:
+    - cron: "0 0 28-31 * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  send-monthly-reset:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Send Monthly Reset notification
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.BDM_MONTHLY_WEBHOOK_URL }}
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
+        run: python monthly_reset.py
