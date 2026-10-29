@@ -499,33 +499,64 @@ def post_to_discord(title, url, translated_text, article_type):
     else:
         label = "🛠️ BDM KOREA | MAIN PATCH NOTES"
 
-    # Ping the role only in the first part to avoid repeated notifications.
     translation_parts = split_for_discord(translated_text)
-    total_parts = len(translation_parts)
 
-    for index, part in enumerate(translation_parts, start=1):
-        mention = f"<@&{DISCORD_ROLE_ID}>\n" if index == 1 else ""
-        header = (
-            f"{mention}"
-            f"🇰🇷 **VARGAND | {label}**\n"
-            f"**{title[:180]}**\n"
-            f"**English translation — Part {index}/{total_parts}**\n\n"
-        )
-        footer = (
-            f"\n\n🔗 **Official Korean source:** {url}"
-            if index == 1 else ""
-        )
+    # Reserve space for the official link at the end of the final message.
+    source_footer = f"\n\n🔗 Official Source: {url}"
+    message_limit = 2000
 
-        available = 2000 - len(header) - len(footer)
-        if len(part) > available:
-            raise RuntimeError(
-                "Translated section exceeds the safe Discord message size. "
-                "No state was saved for this article; lower DISCORD_SAFE_LIMIT."
-            )
+    # Build message parts while keeping the source link at the very end.
+    messages = []
+    current = ""
+
+    for part in translation_parts:
+        if not current:
+            current = part
+        elif len(current) + len(part) + 2 <= DISCORD_SAFE_LIMIT:
+            current += "\n\n" + part
+        else:
+            messages.append(current)
+            current = part
+
+    if current:
+        messages.append(current)
+
+    if not messages:
+        raise RuntimeError("No translated content was available to post.")
+
+    # Only the first message gets the role ping and VARGAND header.
+    first_header = (
+        f"<@&{DISCORD_ROLE_ID}>\n"
+        f"🇰🇷 **VARGAND | {label}**\n"
+        f"**{title[:180]}**\n\n"
+    )
+
+    # Ensure the final message has room for the official source URL.
+    if len(messages[-1]) + len(source_footer) > message_limit:
+        final_text = messages[-1]
+        split_at = final_text.rfind("\n", 0, message_limit - len(source_footer))
+        if split_at < 1:
+            split_at = message_limit - len(source_footer)
+
+        messages[-1] = final_text[:split_at].strip()
+        remainder = final_text[split_at:].strip()
+        if remainder:
+            messages.append(remainder)
+
+    for index, part in enumerate(messages):
+        is_first = index == 0
+        is_last = index == len(messages) - 1
+
+        header = first_header if is_first else ""
+        footer = source_footer if is_last else ""
 
         content = header + part + footer
-        if len(content) > 2000:
-            raise RuntimeError("Prepared Discord message exceeds 2,000 characters.")
+
+        if len(content) > message_limit:
+            raise RuntimeError(
+                "Prepared Discord message exceeds 2,000 characters. "
+                "No state was saved for this article."
+            )
 
         response = requests.post(
             DISCORD_WEBHOOK_URL,
@@ -533,18 +564,19 @@ def post_to_discord(title, url, translated_text, article_type):
                 "content": content,
                 "allowed_mentions": {
                     "parse": [],
-                    "roles": [DISCORD_ROLE_ID] if index == 1 else [],
+                    "roles": [DISCORD_ROLE_ID] if is_first else [],
                 },
             },
             timeout=30,
         )
+
         if response.status_code not in (200, 204):
             raise RuntimeError(
                 f"Discord webhook error {response.status_code}: "
                 f"{response.text[:500]}"
             )
-        time.sleep(1)
 
+        time.sleep(1)
 
 def load_state():
     if not STATE_FILE.exists():
