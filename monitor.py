@@ -402,13 +402,18 @@ Korean title: {title}
 Source segment: {chunk_number} of {total_chunks}
 
 Requirements:
-- Translate faithfully and completely. DO NOT summarize, shorten, or omit details.
-- Preserve every heading, bullet, date, time, number, percentage, item name, class name,
-  requirement, reward, condition, exception, and warning appearing in this segment.
-- Keep the same order and structure as the source wherever possible.
-- Use clear English. If a proper name is uncertain, retain the Korean name in parentheses.
+- Translate faithfully and completely. Do not summarize or omit official update details.
+- Use clear English and clean formatting suitable for a Discord guild announcement.
+- Format individual changes, rewards, requirements, and details as bullet points using "- ".
+- Keep useful section headings, followed by bullet points.
+- Keep ordered steps numbered when their order matters.
+- Preserve dates, times, numbers, percentages, item names, class names, requirements, rewards, conditions, exceptions, and warnings.
+- Do not include website navigation labels such as Login, Forums, News, or CM Note.
+- Do not include the article title, publication date, author name, or Advance Notice label in the translated body.
+- Do not include greetings, introductory paragraphs, or maintenance disclaimers.
+- Do not translate or include the Events section or any content after it.
+- Preserve URLs exactly when they occur in the official content.
 - Do not invent missing information or add commentary.
-- Preserve URLs exactly as written.
 - Translate only this source segment.
 - Output only the English translation.
 
