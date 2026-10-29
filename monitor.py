@@ -204,6 +204,7 @@ def get_patch_list():
 
 def get_article_text(url):
     soup = fetch_soup(url)
+
     selectors = [
         "article",
         '[class*="board-view"]',
@@ -226,18 +227,121 @@ def get_article_text(url):
     best_text = ""
     for candidate in candidates:
         candidate_copy = BeautifulSoup(str(candidate), "html.parser")
+
+        # Remove likely comment/reply sections before extracting text.
+        for tag in candidate_copy.select(
+            '[class*="comment"], [class*="reply"], '
+            '[id*="comment"], [id*="reply"], '
+            '[class*="pagination"], [class*="recommend"]'
+        ):
+            tag.decompose()
+
         text = clean_text(candidate_copy)
         if len(text) > len(best_text):
             best_text = text
 
     if len(best_text) < 500 and soup.body:
-        best_text = clean_text(BeautifulSoup(str(soup.body), "html.parser"))
+        body_copy = BeautifulSoup(str(soup.body), "html.parser")
 
+        for tag in body_copy.select(
+            '[class*="comment"], [class*="reply"], '
+            '[id*="comment"], [id*="reply"], '
+            '[class*="pagination"], [class*="recommend"]'
+        ):
+            tag.decompose()
+
+        best_text = clean_text(body_copy)
+
+    if len(best_text) < 250:
+        raise RuntimeError(
+            "Article text extraction returned too little text; "
+            "stopping to avoid sending an incomplete translation."
+        )
+
+    # Remove page navigation, article metadata, and the introduction.
+    page_title = normalize_title(
+        soup.title.get_text(" ", strip=True) if soup.title else ""
+    )
+
+    unwanted_exact = {
+        "login",
+        "forums",
+        "forum",
+        "news",
+        "cm note",
+        "cm노트",
+        "소식지",
+        "사전 안내",
+        "사전안내",
+        "advance notice",
+        "로그인",
+        "포럼",
+        "뉴스",
+    }
+
+    cleaned_lines = []
+
+    for raw_line in best_text.splitlines():
+        line = re.sub(r"\s+", " ", raw_line).strip()
+        if not line:
+            cleaned_lines.append("")
+            continue
+
+        normalized = line.casefold()
+
+        # Stop before the Events section and everything after it.
+        if re.match(
+            r"^(이벤트|이벤트 안내|이벤트 내용|이벤트 목록|"
+            r"events?)(?:\s*[:：\-].*)?$",
+            line,
+            re.IGNORECASE,
+        ):
+            break
+
+        # Remove website navigation and metadata.
+        if normalized in unwanted_exact:
+            continue
+
+        if page_title and line == page_title:
+            continue
+
+        if re.match(r"^\d{4}[-./]\d{2}[-./]\d{2}(?:\s|$)", line):
+            continue
+
+        if re.match(r"^(?:GM|CM)\s*[\w가-힣]+$", line, re.IGNORECASE):
+            continue
+
+        if re.match(r"^\[?(?:CM노트|소식지|사전 안내|사전안내)\]?$", line):
+            continue
+
+        # Remove the greeting and introductory maintenance paragraphs.
+        if (
+            "안녕하세요, 모험가님" in line
+            or "안녕하세요 모험가님" in line
+            or "다가오는" in line and "업데이트 점검" in line
+            or "업데이트 내용은 패치노트를 통해" in line
+            or "일정은 변경될 수 있습니다" in line
+            or "업데이트 시 안내되는 일부 콘텐츠" in line
+        ):
+            continue
+
+        cleaned_lines.append(line)
+
+    best_text = "\n".join(cleaned_lines).strip()
+
+    if len(best_text) < 100:
+        raise RuntimeError(
+            "Too little official article content remains after cleaning. "
+            "Stopping to avoid posting an incomplete translation."
+        )
+
+    # Preserve official article image URLs where available.
     image_urls = []
     for image in soup.find_all("img", src=True):
         src = image.get("src", "").strip()
         if not src or src.startswith("data:"):
             continue
+
         full_src = urljoin(url, src)
         if full_src.startswith("http") and full_src not in image_urls:
             image_urls.append(full_src)
@@ -245,12 +349,6 @@ def get_article_text(url):
     if image_urls:
         best_text += "\n\n[Images from the official post]\n"
         best_text += "\n".join(image_urls[:25])
-
-    if len(best_text) < 250:
-        raise RuntimeError(
-            "Article text extraction returned too little text; "
-            "stopping to avoid sending an incomplete translation."
-        )
 
     return best_text[:60000]
 
